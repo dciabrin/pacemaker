@@ -51,12 +51,30 @@ sigreap(void)
     } while (pid > 0);
 }
 
+static void
+sigpropagate(void)
+{
+    int status;
+
+    /* When we receive a SIGTERM, we have to propagate it to the real
+     * pacemaker remote pid because that is the one which must do
+     * resource cleanup before exiting.
+     *
+     * Note: we don't check nor log in case kill() returns an error,
+     * because at this point pacemaker_remote is probably gone and
+     * and there is no additional clean-up to do.
+     */
+    status = kill(main_pid, SIGTERM);
+    (void)status;
+}
+
 static struct {
     int sig;
     void (*handler)(void);
 } sigmap[] = {
     { SIGCHLD, sigreap },
     { SIGINT,  sigdone },
+    { SIGTERM, sigpropagate },
 };
 
 /*!
